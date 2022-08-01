@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Button, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, Text, View, Button, TouchableOpacity, Image, ImageBackground  } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc,getDoc } from 'firebase/firestore';
@@ -6,13 +6,17 @@ import { Timestamp, addDoc, collection } from 'firebase/firestore';
 import { auth } from '../firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import {  updateDoc, getDocs, deleteDoc } from 'firebase/firestore';
+import Animated from 'react-native-reanimated';
+import BottomSheet from 'reanimated-bottom-sheet';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const Savedpostdetailsscreen = ({navigation, route}) => {
-    const id = route.params;
+    const {id, sid} = route.params;
     const [post, setPost] = useState({});
     const [likes, setLikes] = useState(0);
     const [liked, setLiked] = useState(false);
     const [currentLikeState, setCurrentLikeState] = useState(true);
+    const [ingrediants, setIngrediants] = useState({});
 
     //gets the 'posts' data and sub collection 'likes' data
     useEffect(()=> {
@@ -27,12 +31,19 @@ const Savedpostdetailsscreen = ({navigation, route}) => {
             setCurrentLikeState(doc.data().currentLikeState); 
           }
       });
+            const colRef2 = collection(docRef, "ingrediants");
+            const subColDoc2 = await getDocs(colRef2);
+            subColDoc2.docs.forEach((doc) => {
+              setIngrediants({id: doc.id,...doc.data()});
+          });
           let data = await getDoc(docRef);
           setLikes(data.data().likesCount);
           setPost(data.data(), data.id);
           }
         });
       },[]);
+
+
 
       //to update the likes count when someone likes the post
       useEffect(()=> {
@@ -84,23 +95,91 @@ const Savedpostdetailsscreen = ({navigation, route}) => {
 
       //delete post function 
       const handleUnSave = () => {
-        deleteDoc(doc(db, 'saves', id));
-        navigation.navigate('saved')
+        const docRef = doc(db, 'saves', sid);
+        deleteDoc(docRef).then(()=>{
+          navigation.goBack();
+        }).catch((error)=>{
+          console.log(error)
+        })
+        
       }
+
+      const renderInner = () => (
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <View style={styles.panelHandle} />
+          </View>
+          <TouchableOpacity style={{flexDirection:'row',alignItems:'center', marginTop: 10}} onPress={handleUnSave} >
+            <Icon name="trash" size={26} color="#818181" />
+            <Text style={{marginLeft: 20}}>Unsave Post</Text>
+          </TouchableOpacity>
+        </View>
+      );
+
+  const bs = React.createRef();
+  const fall = new Animated.Value(1);
 
   return (
 
     <View>
-      <Text>Youruploaddetailscreen</Text>
-      <Image style={styles.image} source = {{uri: post.imageUrl}}/>
-      <Text>Title: {post.title}</Text>
-      <Text>Discription: {post.discription}</Text>
-      <Text>Catagory: {post.catagory}</Text>
-      <TouchableOpacity onPress={handleUpdateLike}>
-        {currentLikeState?<Text>Not Liked</Text>:<Text>Liked</Text>}
-        <Text>Likes: {likes}</Text>
-      </TouchableOpacity>
-      <Button title="UnSave" onPress={handleUnSave}/>
+      <BottomSheet
+        ref={bs}
+        snapPoints={[330, 0]}
+        renderContent={renderInner}
+
+        initialSnap={1}
+        callbackNode={fall}
+        enabledGestureInteraction={true}
+      />
+      <ImageBackground source={{uri: post.imageUrl}} resizeMode="cover" style={styles.backgroundImage} ></ImageBackground>
+      <View style={{flexDirection: 'row', marginTop: 35, alignItems: 'center', justifyContent: 'center'}}> 
+      
+        <TouchableOpacity style={{marginRight: 270}}onPress={()=>{navigation.goBack()}}>
+          <Icon name="chevron-circle-left" size={35} color="#F0F0F0" />
+        </TouchableOpacity>
+
+        
+        <TouchableOpacity style={{ width: 30, marginTop: 10}}onPress={() => bs.current.snapTo(0)}>
+          <Icon name="navicon" size={30} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      <View style={{backgroundColor: '#fff', height: 500, width: 360, borderRadius: 20, marginTop: 200}}>
+        <View style={{flexDirection: 'row', justifyContent: 'center', marginTop: 20, alignItems: 'center'}}>
+
+          <View style={{marginRight: 90, alignItems: 'center'}}>
+            <Icon name="th-large" size={24} color="#E56B6F" />
+            <Text>{post.catagory}</Text>
+          </View>
+
+          <View style={{alignItems: 'center'}}>
+            <Icon name="clock-o" size={26} color="#E56B6F" />
+            <Text>{post.hour}</Text>
+          </View>
+
+          <View style={{marginLeft: 90, alignItems: 'center'}}>
+            <TouchableOpacity onPress={handleUpdateLike} style={{alignItems:'center'}}>
+              {currentLikeState?<Icon name="heart-o" size={24} color="#E56B6F" />:<Icon name="heart" size={24} color="#E56B6F" />}
+              <Text>{likes} Likes</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={{marginLeft: 30, marginTop: 20, marginRight: 20}}>
+          <Text style={{fontSize: 25}}>{post.title}</Text>
+          <Text style={{marginLeft: 10, fontSize: 12}}>created by: {post.creatorName}</Text>
+          <Text style={{marginTop: 10}}>{post.discription}</Text>
+          
+          <Text style={{fontSize: 20, marginTop: 10}}>Ingrediants</Text>
+          <View style={{marginLeft: 20, marginTop: 10}}>
+            <Text>1. {ingrediants.ingrediant1}</Text>
+            <Text>2. {ingrediants.ingrediant2}</Text>
+            <Text>3. {ingrediants.ingrediant3}</Text>
+            <Text>4. {ingrediants.ingrediant4}</Text>
+            <Text>5. {ingrediants.ingrediant5}</Text>
+          </View>
+        </View>
+        
+      </View>
     </View>
   )
 }
@@ -111,5 +190,52 @@ const styles = StyleSheet.create({
     image: {
         width: 100,
         height: 100,
-    }
+    },
+    backgroundImage: {
+      flex: 1,
+      backgroundColor: "white",
+      justifyContent: "center",
+      width: 360,
+      height: 300
+    },
+    panel: {
+      marginTop: 50,
+      padding: 20,
+      backgroundColor: '#FFFFFF',
+      paddingTop: 20,
+      borderRadius: 20,
+      height: 200
+    },
+    panelHeader: {
+      alignItems: 'center'
+    },
+    panelHandle: {
+      width: 60,
+      height: 5,
+      borderRadius: 4,
+      backgroundColor: '#00000040',
+      marginBottom: 10,
+    },
+    panelTitle: {
+      fontSize: 27,
+      height: 35,
+    },
+    panelSubtitle: {
+      fontSize: 14,
+      color: 'gray',
+      height: 30,
+      marginBottom: 10,
+    },
+    panelButton: {
+      padding: 13,
+      borderRadius: 10,
+      backgroundColor: '#FF6347',
+      alignItems: 'center',
+      marginVertical: 7,
+    },
+    panelButtonTitle: {
+      fontSize: 17,
+      fontWeight: 'bold',
+      color: 'white',
+    },
 })

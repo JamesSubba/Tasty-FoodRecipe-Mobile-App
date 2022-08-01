@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View,TextInput, Image, TouchableOpacity, Button } from 'react-native';
+import { StyleSheet, Text, View,TextInput, Image, TouchableOpacity, ActivityIndicator, Button, KeyboardAvoidingView, ImageBackground, ScrollView, StatusBar } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import { doc,getDoc, updateDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -9,6 +9,9 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {v4} from 'uuid';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from '../firebase';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import BottomSheet from 'reanimated-bottom-sheet';
+import Animated from 'react-native-reanimated';
 
 const EditPostScreen = ({navigation, route}) => {
   const id = route.params;
@@ -31,6 +34,7 @@ const EditPostScreen = ({navigation, route}) => {
   const [newingrediant4, setnewIngrediant4] = useState('');
   const [newingrediant5, setnewIngrediant5] = useState('');
   const [ingrediants, setIngrediants] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
     useEffect( ()=> {
       const getData = async () => {
@@ -111,43 +115,126 @@ const EditPostScreen = ({navigation, route}) => {
   const upload = () => {
           onAuthStateChanged(auth, (user) => {
               if (user) {
+                    setIsLoading(!isLoading);
                     uploadImg(newImage, "Img",user.uid);
               } 
             });
         }  
 
-  return (
-    <View>
-      <Text>EditPostScreen</Text>
-      <Text>{post.title}</Text>
-      <TextInput  defaultValue={post.title} onChangeText={(text)=>setNewTitle(text)}/>
-      <TextInput  defaultValue={post.discription} onChangeText={(text)=>setNewDiscription(text)}/>
-      <DropDownPicker
-        open={open}
-        value={value}
-        items={items}
-        setOpen={setOpen}
-        setValue={setValue}
-        setItems={setItems}
-        mode="BADGE"
-        disableBorderRadius={true}
-        onChangeValue={(value) => {
-            setNewCatagory(value)
-          }}
-      />
-      <TouchableOpacity onPress={takeNewImageHandler}>
-        {isNewImage?<Image style={styles.image} source = {{uri: newImage}}/>:<Image style={styles.image} source = {{uri: post.imageUrl}}/>}
-      </TouchableOpacity>
-      <Button title="select" onPress={openSystemPhotos}/>
-      
-      <TextInput defaultValue={ingrediants.ingrediant1} onChangeText={(text)=>setnewIngrediant1(text)}/>
-      <TextInput defaultValue={ingrediants.ingrediant2} onChangeText={(text)=>setnewIngrediant2(text)}/>
-      <TextInput defaultValue={ingrediants.ingrediant3} onChangeText={(text)=>setnewIngrediant3(text)}/>
-      <TextInput defaultValue={ingrediants.ingrediant4} onChangeText={(text)=>setnewIngrediant4(text)}/>
-      <TextInput defaultValue={ingrediants.ingrediant5} onChangeText={(text)=>setnewIngrediant5(text)}/>
+        const renderInner = () => (
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelHandle} />
+            </View>
+            <TouchableOpacity style={{flexDirection:'row',alignItems:'center', marginTop: 10}} onPress={takeNewImageHandler} >
+              <Icon name="camera" size={19} color="#818181" />
+              <Text style={{marginLeft: 20}}>Open Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{flexDirection:'row',alignItems:'center', marginTop: 15}} onPress={openSystemPhotos} >
+              <Icon name="folder" size={22} color="#818181" />
+              <Text style={{marginLeft: 20}}>Select from Gallery</Text>
+            </TouchableOpacity>
+          </View>
+        );
 
-      <Button title='update' onPress={upload}/>
+      const bs = React.createRef();
+      const fall = new Animated.Value(1);
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#fff'}}   >
+      <ScrollView>
+        <ImageBackground source={require('../assets/BackgroundImages/Post5.png')} resizeMode="cover" style={styles.backgroundImage} >
+          <StatusBar translucent backgroundColor="transparent" />
+    <View style={styles.container}>
+    <TouchableOpacity style={{marginRight: 300}}onPress={()=>{navigation.goBack()}}>
+                <Icon name="chevron-circle-left" size={35} color="#F0F0F0" />
+              </TouchableOpacity>
+              
+              <Text style={{color: "#FFF", fontSize: 30, fontWeight: 'bold'}}>Edit Post</Text>
+              <Text style={{color: "#FFF", fontSize: 10, fontStyle: 'italic'}}>'make changed to your post'</Text>
+
+              <View style={styles.containerb}>
+
+              <Text style={{fontSize: 14, color: '#A09F9F', fontWeight: 'bold', marginLeft: 20, marginBottom: 8, marginRight: 240}}>Details</Text>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                <TextInput  defaultValue={post.title} onChangeText={(text)=>setNewDiscription(text)} style={styles.input} />
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                <TextInput  defaultValue={post.hour} onChangeText={(text)=>setNewDiscription(text)} style={styles.input} />
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                <TextInput  defaultValue={post.discription} onChangeText={(text)=>setNewDiscription(text)} style={styles.input} multiline={true}/>
+              </View>
+              
+              <Text style={{fontSize: 14, color: '#A09F9F', fontWeight: 'bold', marginLeft: 20, marginBottom: 8, marginRight: 225}}>Category</Text>
+                  <DropDownPicker
+                    open={open}
+                    value={value}
+                    items={items}
+                    setOpen={setOpen}
+                    setValue={setValue}
+                    setItems={setItems}
+                    mode="BADGE"
+                    disableBorderRadius={true}
+                    onChangeValue={(value) => {
+                        setNewCatagory(value)
+                      }}
+                      style={{width: 285, height:53, marginBottom: 20}} 
+                  />
+               <Text style={{fontSize: 14, color: '#A09F9F', fontWeight: 'bold', marginLeft: 20, marginBottom: 8, marginRight: 210}}>Ingrediants</Text>
+                  
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                  <TextInput defaultValue={ingrediants.ingrediant1} onChangeText={(text)=>setnewIngrediant1(text)} style={styles.input}/>
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                  <TextInput defaultValue={ingrediants.ingrediant2} onChangeText={(text)=>setnewIngrediant2(text)} style={styles.input}/>
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                  <TextInput defaultValue={ingrediants.ingrediant3} onChangeText={(text)=>setnewIngrediant3(text)} style={styles.input}/>
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                  <TextInput defaultValue={ingrediants.ingrediant4} onChangeText={(text)=>setnewIngrediant4(text)} style={styles.input}/>
+              </View>
+              <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center', borderColor: 'black', borderWidth: 1,width:'88%',borderRadius:8,height:53,paddingLeft:20, marginBottom: 20}}>
+                  <TextInput defaultValue={ingrediants.ingrediant5} onChangeText={(text)=>setnewIngrediant5(text)} style={styles.input}/>
+              </View>
+              <BottomSheet
+                ref={bs}
+                snapPoints={[350, 0]}
+                renderContent={renderInner}
+
+                initialSnap={1}
+                callbackNode={fall}
+                enabledGestureInteraction={true}
+              />
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  <TouchableOpacity onPress={() => bs.current.snapTo(0)}>
+                    {isNewImage?<Image style={styles.image} source = {{uri: newImage}}/>:<Image style={styles.image} source = {{uri: post.imageUrl}}/>}
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => bs.current.snapTo(0)} > 
+                  <View style={{borderColor: 'black', borderWidth: 1, borderRadius: 8, paddingHorizontal: 98, paddingVertical: 16 }}>
+                    <Text>Change Image</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.appButtonContainer} onPress={upload} >
+                  {isLoading && <ActivityIndicator size={15} color="#fff" />}
+                  <Text style={styles.appButtonText}>Save Changes</Text>
+                </TouchableOpacity>
+                  
+              </View>
+      
     </View>
+    </ImageBackground>
+    </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
@@ -155,7 +242,91 @@ export default EditPostScreen
 
 const styles = StyleSheet.create({
   image: {
-    width: 100,
-    height: 100,
-}
+    width:250,
+  height: 250,
+  borderRadius: 9,
+    marginTop: 5,
+     marginBottom: 20
+}, 
+backgroundImage: {
+  flex: 1,
+  backgroundColor: "white",
+  justifyContent: "center",
+  width: 360,
+  height: 1350
+},
+container: {
+  flex: 1,
+  alignItems: 'center',
+  flexDirection:'column',
+  paddingTop:30,
+  paddingHorizontal:'3%',
+  marginBottom: 10
+},
+containerb: {
+  marginTop: 35,
+  flex: 1,
+  alignItems: 'center'
+},
+input:{
+  position:'relative',
+  height:'100%',
+  width:'90%'
+},
+panel: {
+  marginTop: 240,
+  padding: 20,
+  backgroundColor: '#FFFFFF',
+  paddingTop: 20,
+  borderRadius: 20,
+  height: 160
+},
+panelHeader: {
+  alignItems: 'center'
+},
+panelHandle: {
+  width: 60,
+  height: 5,
+  borderRadius: 4,
+  backgroundColor: '#00000040',
+  marginBottom: 10,
+},
+panelTitle: {
+  fontSize: 27,
+  height: 35,
+},
+panelSubtitle: {
+  fontSize: 14,
+  color: 'gray',
+  height: 30,
+  marginBottom: 10,
+},
+panelButton: {
+  padding: 13,
+  borderRadius: 10,
+  backgroundColor: '#FF6347',
+  alignItems: 'center',
+  marginVertical: 7,
+},
+panelButtonTitle: {
+  fontSize: 17,
+  fontWeight: 'bold',
+  color: 'white',
+},
+appButtonContainer: {
+  flexDirection: 'row',
+  elevation: 3,
+  backgroundColor: "#E56B6F",
+  borderRadius: 30,
+  paddingVertical: 15,
+  width: 285,
+  marginBottom: 10,
+  marginTop: 20, 
+  justifyContent: 'center'
+   
+},
+appButtonText: {
+  fontSize: 16,
+  color: "#fff",
+  fontWeight: "bold"  }
 })
